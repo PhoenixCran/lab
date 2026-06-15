@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图书管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+            padding-bottom: 50px;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .tab-content {
+            background: white;
+            border-radius: 0 0 8px 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav-tabs {
+            margin-bottom: 0;
+        }
+        .table th {
+            background-color: #f8f9fa;
+        }
+        .status-available {
+            color: #198754;
+        }
+        .status-borrowed {
+            color: #dc3545;
+        }
+        .action-buttons {
+            white-space: nowrap;
+        }
+        .form-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .api-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .api-status.online {
+            background-color: #d1f7d1;
+            color: #0f5132;
+        }
+        .api-status.offline {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="mb-4">
+            <h1 class="text-center"><i class="bi bi-book"></i> 图书管理系统</h1>
+            <p class="text-center text-muted">基于 Go + MySQL 的简单管理系统</p>
+        </header>
+
+        <ul class="nav nav-tabs" id="mainTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button">
+                    <i class="bi bi-people"></i> 用户管理
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="books-tab" data-bs-toggle="tab" data-bs-target="#books" type="button">
+                    <i class="bi bi-book"></i> 图书管理
+                </button>
+            </li>
+        </ul>
+
+        <!-- 用户管理标签页 -->
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="users" role="tabpanel">
+                <div class="form-section">
+                    <h4><i class="bi bi-person-plus"></i> 添加新用户</h4>
+                    <form id="userForm" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="userName" class="form-label">姓名 *</label>
+                            <input type="text" class="form-control" id="userName" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="userEmail" class="form-label">邮箱 *</label>
+                            <input type="email" class="form-control" id="userEmail" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="userPhone" class="form-label">电话</label>
+                            <input type="text" class="form-control" id="userPhone">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> 添加用户
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditUser" style="display:none;">
+                                <i class="bi bi-x-lg"></i> 取消编辑
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <h4><i class="bi bi-list"></i> 用户列表</h4>
+                    <table class="table table-hover" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>姓名</th>
+                                <th>邮箱</th>
+                                <th>电话</th>
+                                <th>创建时间</th>
+                                <th>更新时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- 动态加载 -->
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> 加载中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 图书管理标签页 -->
+            <div class="tab-pane fade" id="books" role="tabpanel">
+                <div class="form-section">
+                    <h4><i class="bi bi-plus-circle"></i> 添加新图书</h4>
+                    <form id="bookForm" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="bookTitle" class="form-label">书名 *</label>
+                            <input type="text" class="form-control" id="bookTitle" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="bookAuthor" class="form-label">作者 *</label>
+                            <input type="text" class="form-control" id="bookAuthor" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="bookISBN" class="form-label">ISBN *</label>
+                            <input type="text" class="form-control" id="bookISBN" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="bookCategory" class="form-label">分类 *</label>
+                            <input type="text" class="form-control" id="bookCategory" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="bookStatus" class="form-label">状态</label>
+                            <select class="form-select" id="bookStatus">
+                                <option value="available">可用</option>
+                                <option value="borrowed">已借出</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i> 添加图书
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="cancelEditBook" style="display:none;">
+                                <i class="bi bi-x-lg"></i> 取消编辑
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-responsive">
+                    <h4><i class="bi bi-list"></i> 图书列表</h4>
+                    <table class="table table-hover" id="booksTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>书名</th>
+                                <th>作者</th>
+                                <th>ISBN</th>
+                                <th>分类</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>更新时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="booksTableBody">
+                            <!-- 动态加载 -->
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">
+                                    <i class="bi bi-hourglass-split"></i> 加载中...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API 状态指示器 -->
+    <div id="apiStatus" class="api-status offline">
+        <i class="bi bi-plug"></i> API 未连接
+    </div>
+
+    <!-- 模态框 - 删除确认 -->
+    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    您确定要删除此项吗？此操作无法撤销。
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // API 基础 URL - 默认 localhost:8080
+        const API_BASE_URL = 'http://localhost:8080/api';
+
+        // 当前编辑的 ID
+        let editingUserId = null;
+        let editingBookId = null;
+        let deleteCandidate = { type: null, id: null };
+
+        // DOM 加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPIStatus();
+            loadUsers();
+            loadBooks();
+
+            // 用户表单提交
+            document.getElementById('userForm').addEventListener('submit', handleUserSubmit);
+            document.getElementById('cancelEditUser').addEventListener('click', cancelEditUser);
+
+            // 图书表单提交
+            document.getElementById('bookForm').addEventListener('submit', handleBookSubmit);
+            document.getElementById('cancelEditBook').addEventListener('click', cancelEditBook);
+
+            // 删除确认
+            document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+
+            // 定期检查 API 状态
+            setInterval(checkAPIStatus, 30000);
+        });
+
+        // 检查 API 状态
+        async function checkAPIStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    document.getElementById('apiStatus').className = 'api-status online';
+                    document.getElementById('apiStatus').innerHTML = '<i class="bi bi-plug-fill"></i> API 已连接';
+                } else {
+                    document.getElementById('apiStatus').className = 'api-status offline';
+                    document.getElementById('apiStatus').innerHTML = '<i class="bi bi-plug"></i> API 错误';
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').className = 'api-status offline';
+                document.getElementById('apiStatus').innerHTML = '<i class="bi bi-plug"></i> API 未连接';
+            }
+        }
+
+        // 加载用户列表
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const users = await response.json();
+                renderUsersTable(users);
+            } catch (error) {
+                console.error('加载用户失败:', error);
+                document.getElementById('usersTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-danger">
+                            <i class="bi bi-exclamation-triangle"></i> 加载失败: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 渲染用户表格
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('usersTableBody');
+            if (users.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            <i class="bi bi-person-x"></i> 暂无用户数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr data-id="${user.id}">
+                    <td>${user.id}</td>
+                    <td>${escapeHtml(user.name)}</td>
+                    <td>${escapeHtml(user.email)}</td>
+                    <td>${escapeHtml(user.phone)}</td>
+                    <td>${formatDateTime(user.created_at)}</td>
+                    <td>${formatDateTime(user.updated_at)}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editUser(${user.id}, '${escapeHtml(user.name)}', '${escapeHtml(user.email)}', '${escapeHtml(user.phone)}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="showDeleteConfirm('user', ${user.id}, '${escapeHtml(user.name)}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 加载图书列表
+        async function loadBooks() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/books`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const books = await response.json();
+                renderBooksTable(books);
+            } catch (error) {
+                console.error('加载图书失败:', error);
+                document.getElementById('booksTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-danger">
+                            <i class="bi bi-exclamation-triangle"></i> 加载失败: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 渲染图书表格
+        function renderBooksTable(books) {
+            const tbody = document.getElementById('booksTableBody');
+            if (books.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">
+                            <i class="bi bi-book-x"></i> 暂无图书数据
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = books.map(book => `
+                <tr data-id="${book.id}">
+                    <td>${book.id}</td>
+                    <td>${escapeHtml(book.title)}</td>
+                    <td>${escapeHtml(book.author)}</td>
+                    <td>${escapeHtml(book.isbn)}</td>
+                    <td>${escapeHtml(book.category)}</td>
+                    <td>
+                        <span class="badge ${book.status === 'available' ? 'bg-success' : 'bg-danger'}">
+                            ${book.status === 'available' ? '可用' : '已借出'}
+                        </span>
+                    </td>
+                    <td>${formatDateTime(book.created_at)}</td>
+                    <td>${formatDateTime(book.updated_at)}</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editBook(${book.id}, '${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.isbn)}', '${escapeHtml(book.category)}', '${book.status}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="showDeleteConfirm('book', ${book.id}, '${escapeHtml(book.title)}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // 处理用户提交（创建或更新）
+        async function handleUserSubmit(e) {
+            e.preventDefault();
+            const form = e.target;
+            const name = document.getElementById('userName').value.trim();
+            const email = document.getElementById('userEmail').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+
+            const userData = { name, email, phone };
+            const url = editingUserId ? `${API_BASE_URL}/users/${editingUserId}` : `${API_BASE_URL}/users`;
+            const method = editingUserId ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(editingUserId ? userData : { name, email, phone })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || `HTTP ${response.status}`);
+                }
+
+                showAlert('success', editingUserId ? '用户更新成功' : '用户添加成功');
+                resetUserForm();
+                loadUsers();
+            } catch (error) {
+                console.error('保存用户失败:', error);
+                showAlert('danger', `保存失败: ${error.message}`);
+            }
+        }
+
+        // 处理图书提交（创建或更新）
+        async function handleBookSubmit(e) {
+            e.preventDefault();
+            const title = document.getElementById('bookTitle').value.trim();
+            const author = document.getElementById('bookAuthor').value.trim();
+            const isbn = document.getElementById('bookISBN').value.trim();
+            const category = document.getElementById('bookCategory').value.trim();
+            const status = document.getElementById('bookStatus').value;
+
+            const bookData = editingBookId ? {
+                title: title,
+                author: author,
+                isbn: isbn,
+                category: category,
+                status: status
+            } : { title, author, isbn, category };
+
+            const url = editingBookId ? `${API_BASE_URL}/books/${editingBookId}` : `${API_BASE_URL}/books`;
+            const method = editingBookId ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bookData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || `HTTP ${response.status}`);
+                }
+
+                showAlert('success', editingBookId ? '图书更新成功' : '图书添加成功');
+                resetBookForm();
+                loadBooks();
+            } catch (error) {
+                console.error('保存图书失败:', error);
+                showAlert('danger', `保存失败: ${error.message}`);
+            }
+        }
+
+        // 编辑用户
+        function editUser(id, name, email, phone) {
+            editingUserId = id;
+            document.getElementById('userName').value = name;
+            document.getElementById('userEmail').value = email;
+            document.getElementById('userPhone').value = phone;
+            document.getElementById('userForm').querySelector('button[type="submit"]').textContent = '更新用户';
+            document.getElementById('cancelEditUser').style.display = 'inline-block';
+            document.getElementById('users-tab').click();
+        }
+
+        // 取消编辑用户
+        function cancelEditUser() {
+            editingUserId = null;
+            resetUserForm();
+        }
+
+        // 重置用户表单
+        function resetUserForm() {
+            document.getElementById('userForm').reset();
+            document.getElementById('userForm').querySelector('button[type="submit"]').textContent = '添加用户';
+            document.getElementById('cancelEditUser').style.display = 'none';
+            editingUserId = null;
+        }
+
+        // 编辑图书
+        function editBook(id, title, author, isbn, category, status) {
+            editingBookId = id;
+            document.getElementById('bookTitle').value = title;
+            document.getElementById('bookAuthor').value = author;
+            document.getElementById('bookISBN').value = isbn;
+            document.getElementById('bookCategory').value = category;
+            document.getElementById('bookStatus').value = status;
+            document.getElementById('bookForm').querySelector('button[type="submit"]').textContent = '更新图书';
+            document.getElementById('cancelEditBook').style.display = 'inline-block';
+            document.getElementById('books-tab').click();
+        }
+
+        // 取消编辑图书
+        function cancelEditBook() {
+            editingBookId = null;
+            resetBookForm();
+        }
+
+        // 重置图书表单
+        function resetBookForm() {
+            document.getElementById('bookForm').reset();
+            document.getElementById('bookStatus').value = 'available';
+            document.getElementById('bookForm').querySelector('button[type="submit"]').textContent = '添加图书';
+            document.getElementById('cancelEditBook').style.display = 'none';
+            editingBookId = null;
+        }
+
+        // 显示删除确认框
+        function showDeleteConfirm(type, id, name) {
+            deleteCandidate = { type, id };
+            const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            document.querySelector('#confirmDeleteModal .modal-body').textContent =
+                `您确定要删除${type === 'user' ? '用户' : '图书'} "${name}" 吗？此操作无法撤销。`;
+            modal.show();
+        }
+
+        // 确认删除
+        async function confirmDelete() {
+            if (!deleteCandidate.type || !deleteCandidate.id) return;
+
+            const { type, id } = deleteCandidate;
+            const url = `${API_BASE_URL}/${type}s/${id}`;
+
+            try {
+                const response = await fetch(url, { method: 'DELETE' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                showAlert('success', `${type === 'user' ? '用户' : '图书'}删除成功`);
+                if (type === 'user') {
+                    loadUsers();
+                } else {
+                    loadBooks();
+                }
+                bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+                deleteCandidate = { type: null, id: null };
+            } catch (error) {
+                console.error('删除失败:', error);
+                showAlert('danger', `删除失败: ${error.message}`);
+            }
+        }
+
+        // 显示警告信息
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // 插入到容器顶部
+            const container = document.querySelector('.container');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            // 5秒后自动消失
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // 格式化日期时间
+        function formatDateTime(isoString) {
+            if (!isoString) return '-';
+            const date = new Date(isoString);
+            // 转换为本地时间（中国标准时间）并格式化
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
